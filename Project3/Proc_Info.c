@@ -1,9 +1,12 @@
 #include "trace.h"
 #include "Proc_Info.tmh"
 
+#include "globals.h"
 #include "Proc_Info.h"
 #include <TlHelp32.h>
 #include <stdio.h>
+
+extern GLOBALS gData;
 
 BOOL SetPrivilege(
     LPCSTR lpszPrivilege  // name of privilege to enable/disable
@@ -215,35 +218,60 @@ GetProcessList()
     return(TRUE);
 }
 
-HMODULE
+BOOL
 LoadNtdllFunctions()
 {
+    BOOL failed = FALSE;
+    HMODULE hNtDll = LoadLibraryA("ntdll.dll");
+    if (hNtDll == NULL)
     {
-        // Load NTDLL Library and get entry address
-
-        // for NtQueryInformationProcess
-
-        HMODULE hNtDll = LoadLibraryA("ntdll.dll");
-        if (hNtDll == NULL)
-        {
-            AppLogError("Failed to load ntdll.dll");
-            return NULL;
-        }
-
-        gNtQueryInformationProcess = (pfnNtQueryInformationProcess)GetProcAddress(hNtDll,
-            "NtQueryInformationProcess");
-        if (gNtQueryInformationProcess == NULL) {
-            AppLogError("GetProcAddress failed to retrieve NtQueryInformationProcess");
-            FreeLibrary(hNtDll);
-            return NULL;
-        }
-        return hNtDll;
+        AppLogError("Failed to load ntdll.dll");
+        return FALSE;
     }
+
+    gData.Functions.fNtQueryInformationProcess = (_NtQueryInformationProcess)GetProcAddress(hNtDll, "NtQueryInformationProcess");
+    if (NULL == gData.Functions.fNtQueryInformationProcess) {
+        AppLogError("GetProcAddress failed to retrieve NtQueryInformationProcess");
+        failed = TRUE;
+        goto cleanup;
+    }
+
+    gData.Functions.fNtQuerySystemInformation = (_NtQuerySystemInformation)GetProcAddress(hNtDll, "NtQuerySystemInformation");
+    if (NULL == gData.Functions.fNtQuerySystemInformation) {
+        AppLogError("GetProcAddress failed to retrieve NtQuerySystemInformation");
+        failed = TRUE;
+        goto cleanup;
+    }
+
+    gData.Functions.fNtUnmapViewOfSection = (_NtUnmapViewOfSection)GetProcAddress(hNtDll, "NtUnmapViewOfSection");
+    if (NULL == gData.Functions.fNtUnmapViewOfSection) {
+        AppLogError("GetProcAddress failed to retrieve NtUnmapViewOfSection");
+        failed = TRUE;
+        goto cleanup;
+    }
+
+cleanup:
+    if (failed)
+    {
+        FreeLibrary(hNtDll);
+        gData.NtdllModule = INVALID_HANDLE_VALUE;
+        gData.Functions.fNtQueryInformationProcess = NULL;
+        gData.Functions.fNtQuerySystemInformation = NULL;
+        gData.Functions.fNtUnmapViewOfSection = NULL;
+    }
+    else
+    {
+        gData.NtdllModule = hNtDll;
+    }
+    return TRUE;
 }
 
-void FreeNtdllFunctions(HMODULE hNtDll)
+void FreeNtdllFunctions()
 {
-    if (hNtDll)
-        FreeLibrary(hNtDll);
-    gNtQueryInformationProcess = NULL;
+    if (gData.NtdllModule)
+        FreeLibrary(gData.NtdllModule);
+    gData.NtdllModule = INVALID_HANDLE_VALUE;
+    gData.Functions.fNtQueryInformationProcess = NULL;
+    gData.Functions.fNtQuerySystemInformation = NULL;
+    gData.Functions.fNtUnmapViewOfSection = NULL;
 }

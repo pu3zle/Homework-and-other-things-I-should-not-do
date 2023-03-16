@@ -155,11 +155,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="globals.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="peb.cpp" />
     <ClCompile Include="Proc_Info.c" />
     <ClCompile Include="ThreadPool.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="globals.h" />
     <ClInclude Include="internals.h" />
     <ClInclude Include="peb.h" />
     <ClInclude Include="Proc_Info.h" />

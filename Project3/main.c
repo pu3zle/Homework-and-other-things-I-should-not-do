@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "Proc_Info.h"
-
+#include "globals.h"
 
 #include "trace.h"
 #include "main.tmh"
@@ -19,21 +19,13 @@ stop - stops the thread pool \n\
 enqueue - enqueues 100 items in the thread pool \n\
 exit - exits the program \n";
 
+GLOBALS gData;
 
 int main(int argc, char* args[])
 {
 	WPP_INIT_TRACING(NULL);
 	CHAR command[100];
-	THREAD_POOL threadPool;
-	HMODULE ntdllLib = INVALID_HANDLE_VALUE;
 
-	TpPreInitThreadPool(&threadPool);
-	ntdllLib = LoadNtdllFunctions();
-	if (!ntdllLib)
-	{
-		printf("Failed to load ntdll functions!");
-		return 1;
-	}
 
 	while (1)
 	{
